@@ -374,6 +374,12 @@ function renderResults() {
     } else {
         summary = `<div class="error-card"><h4>Cadena rechazada</h4><p>${r.error}</p><div class="hint"><strong>💡 Sugerencia:</strong> ${suggestErrorFix(r.error)}</div></div>`;
     }
+    const isLR = ['lr0', 'slr1', 'lalr1', 'lr1'].includes(state.currentParser);
+    if (isLR && r.tables && r.tables.wasAutoAugmented) {
+        const s = r.tables.originalStart;
+        const sp = r.tables.augmentedStart;
+        summary += `<div class="augment-notice">La gramática fue aumentada automáticamente: se añadió <code>${sp} → ${s}</code> como nuevo símbolo inicial.</div>`;
+    }
     $('#result-summary').innerHTML = summary;
 
     // AST
