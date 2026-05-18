@@ -153,6 +153,26 @@ function setHTML(sel, html) {
     if (el) el.innerHTML = html;
 }
 
+function parseTreeHasArithmeticOperator(parseTree) {
+    const operators = new Set(['+', '-', '*', '/', '**', '^']);
+
+    function visit(node) {
+        if (!node) return false;
+        const children = node.children || [];
+        if (node.leaf || children.length === 0) {
+            return operators.has(node.token || node.name);
+        }
+        return children.some(visit);
+    }
+
+    return visit(parseTree);
+}
+
+function renderAstUnavailableMessage(message) {
+    $('#realAst-container').innerHTML = `<div class="zoom-content"><div class="info-card ast-info-card">${message}</div></div>`;
+    applyPanZoom('realAst');
+}
+
 // Mermaid (cargado en HTML)
 function renderMermaid(targetSel, code) {
     const el = $(targetSel);
@@ -548,14 +568,21 @@ function renderResults() {
         const parseTreeCode = Visualizers.astToMermaid(r.ast);
         renderMermaid('#ast-container', parseTreeCode);
 
-        const realAst = Visualizers.parseTreeToAst(r.ast);
-        const realAstCode = Visualizers.astToMermaid(realAst);
-        renderMermaid('#realAst-container', realAstCode);
+        if (parseTreeHasArithmeticOperator(r.ast)) {
+            const realAst = Visualizers.parseTreeToAst(r.ast);
+            if (realAst) {
+                const realAstCode = Visualizers.astToMermaid(realAst);
+                renderMermaid('#realAst-container', realAstCode);
+            } else {
+                renderAstUnavailableMessage('No se pudo construir un AST aritmético para esta cadena. Revisa la pestaña Parse Tree.');
+            }
+        } else {
+            renderAstUnavailableMessage('AST no disponible: el Parse Tree no contiene operadores aritméticos reconocidos (+, -, *, /, **, ^).');
+        }
     } else {
         $('#ast-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); text-align: center; padding: 40px; font-family: var(--font-mono);">No hay AST disponible (parseo falló)</p></div>';
         $('#realAst-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); text-align: center; padding: 40px; font-family: var(--font-mono);">No hay AST disponible porque el parseo fallÃ³.</p></div>';
         applyPanZoom('ast');
-        applyPanZoom('realAst');
     }
 
     // Trace step-by-step

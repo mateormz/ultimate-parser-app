@@ -48,7 +48,7 @@ function parseTreeToAst(parseTree) {
 
     const tokens = collectTerminalTokens(parseTree);
     const expressionTokens = tokens.filter(t => t !== '$');
-    const hasExpressionOperator = expressionTokens.some(t => ['+', '-', '*', '/', '**'].includes(t));
+    const hasExpressionOperator = expressionTokens.some(t => ['+', '-', '*', '/', '**', '^'].includes(t));
 
     if (expressionTokens[0] === 'print') {
         const args = extractPrintArgs(expressionTokens);
@@ -63,7 +63,7 @@ function parseTreeToAst(parseTree) {
         if (ast) return ast;
     }
 
-    return simplifyParseTree(parseTree) || { name: 'AST vacío', leaf: true, children: [] };
+    return null;
 }
 
 function collectTerminalTokens(node) {
@@ -100,7 +100,7 @@ function extractPrintArgs(tokens) {
 
 function parseExpressionTokens(tokens) {
     let pos = 0;
-    const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '**': 3 };
+    const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '**': 3, '^': 3 };
 
     function parseExpression(minPrec = 0) {
         let left = parsePrimary();
@@ -112,7 +112,7 @@ function parseExpressionTokens(tokens) {
             if (!prec || prec < minPrec) break;
 
             pos++;
-            const nextMinPrec = op === '**' ? prec : prec + 1;
+            const nextMinPrec = (op === '**' || op === '^') ? prec : prec + 1;
             const right = parseExpression(nextMinPrec);
             if (!right) break;
             left = { name: op, children: [left, right] };
@@ -132,23 +132,6 @@ function parseExpressionTokens(tokens) {
     }
 
     return parseExpression(0);
-}
-
-function simplifyParseTree(node) {
-    if (!node || isIgnoredAstToken(node.name)) return null;
-
-    const children = (node.children || [])
-        .map(simplifyParseTree)
-        .filter(Boolean);
-
-    if (node.leaf) {
-        return { name: node.token || node.name, leaf: true, children: [] };
-    }
-    if (children.length === 0) return null;
-    if (children.length === 1) {
-        return children[0];
-    }
-    return { name: node.name, children };
 }
 
 function isIgnoredAstToken(value) {
