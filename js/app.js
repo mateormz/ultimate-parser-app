@@ -359,6 +359,7 @@ function init() {
     $('#step-last').addEventListener('click', () => goToStep(state.result?.trace?.length - 1 || 0));
     $('#step-play').addEventListener('click', autoPlay);
     $('#toggle-automaton-view-btn')?.addEventListener('click', toggleAutomatonView);
+    $('#export-pdf-btn')?.addEventListener('click', exportTablesPDF);
     $('#ask-ai-btn')?.addEventListener('click', askGrammarAI);
     setupZoomControls();
 
@@ -834,6 +835,162 @@ function renderStates(states) {
     }
     html += '</div>';
     return html;
+}
+
+function exportTablesPDF() {
+    const r = state.result;
+    if (!r || !r.tables) {
+        alert('Primero parsea una cadena para generar las tablas.');
+        return;
+    }
+
+    const parserNames = {
+        'll1': 'LL(1)', 'lr0': 'LR(0)', 'slr1': 'SLR(1)', 'lalr1': 'LALR(1)', 'lr1': 'LR(1) Canónico',
+        'recursive-descent': 'Descenso Recursivo'
+    };
+    const parserLabel = parserNames[state.currentParser] || state.currentParser;
+    const grammarText = ($('#grammar-input')?.value || '').trim();
+    const inputStr = ($('#string-input')?.value || '').trim();
+    const dateStr = new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Build table HTML sections (reuse logic, explicit colors for print)
+    let tablesHtml = '';
+
+    if (r.tables.ll1 && state.grammar) {
+        const g = state.grammar;
+        const terminals = [...g.terminals, Grammar.END_MARKER];
+        tablesHtml += '<h2>Tabla LL(1) — M[A, a]</h2>';
+        tablesHtml += '<table><thead><tr><th>No-Term \\ Term</th>';
+        for (const t of terminals) tablesHtml += `<th>${t}</th>`;
+        tablesHtml += '</tr></thead><tbody>';
+        for (const nt of g.nonTerminals) {
+            tablesHtml += `<tr><td class="rowhead">${nt}</td>`;
+            for (const t of terminals) {
+                const prod = (r.tables.ll1[nt] || {})[t];
+                tablesHtml += prod ? `<td>${nt} → ${prod.rhs.join(' ')}</td>` : '<td></td>';
+            }
+            tablesHtml += '</tr>';
+        }
+        tablesHtml += '</tbody></table>';
+    }
+
+    if (r.tables.action && state.parserInstance) {
+        const augGrammar = state.parserInstance.grammar;
+        const terminals = [...new Set([...augGrammar.terminals, Grammar.END_MARKER])];
+        const ntList = [...augGrammar.nonTerminals].filter(n => n !== augGrammar.startSymbol);
+
+        tablesHtml += '<h2>Tabla ACTION &amp; GOTO</h2>';
+        tablesHtml += '<table><thead><tr><th rowspan="2">Estado</th>';
+        tablesHtml += `<th colspan="${terminals.length}" style="text-align:center;">ACTION</th>`;
+        tablesHtml += `<th colspan="${ntList.length}" style="text-align:center;">GOTO</th></tr><tr>`;
+        for (const t of terminals) tablesHtml += `<th>${t}</th>`;
+        for (const nt of ntList) tablesHtml += `<th>${nt}</th>`;
+        tablesHtml += '</tr></thead><tbody>';
+
+        for (let i = 0; i < r.tables.states.length; i++) {
+            tablesHtml += `<tr><td class="rowhead">${i}</td>`;
+            for (const t of terminals) {
+                const a = (r.tables.action[i] || {})[t];
+                if (a) {
+                    let cls = a.type;
+                    let display = a.type === 'shift' ? 's' + a.value : a.type === 'reduce' ? 'r' + a.value : 'acc';
+                    tablesHtml += `<td class="${cls}">${display}</td>`;
+                } else tablesHtml += '<td></td>';
+            }
+            for (const nt of ntList) {
+                const g_ = (r.tables.goto[i] || {})[nt];
+                tablesHtml += g_ !== undefined ? `<td class="goto">${g_}</td>` : '<td></td>';
+            }
+            tablesHtml += '</tr>';
+        }
+        tablesHtml += '</tbody></table>';
+
+        // Legend
+        tablesHtml += `<p class="legend"><span class="s-leg">sN</span> shift al estado N &nbsp;|&nbsp; <span class="r-leg">rN</span> reduce con producción N &nbsp;|&nbsp; <span class="r-leg">acc</span> aceptar &nbsp;|&nbsp; <span class="g-leg">N</span> GOTO estado N</p>`;
+
+        // Productions
+        tablesHtml += '<h2>Producciones</h2><table class="prod-table"><tbody>';
+        r.tables.productions.forEach((p, i) => {
+            tablesHtml += `<tr><td class="prod-num">(${i})</td><td>${p.lhs} → ${p.rhs.join(' ')}</td></tr>`;
+        });
+        tablesHtml += '</tbody></table>';
+
+        // States
+        tablesHtml += '<h2 style="page-break-before:always;">Estados LR (Itemsets)</h2>';
+        tablesHtml += '<div class="states-grid">';
+        for (const s of r.tables.states) {
+            tablesHtml += `<div class="state-card"><div class="state-title">I<sub>${s.index}</sub></div>`;
+            tablesHtml += s.items.map(it => `<div class="state-item">${it}</div>`).join('');
+            tablesHtml += '</div>';
+        }
+        tablesHtml += '</div>';
+    }
+
+    if (!tablesHtml) {
+        tablesHtml = '<p>No hay tablas para este parser.</p>';
+    }
+
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tablas ${parserLabel} — ParserLab</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #1a1a1a; background: #fff; padding: 24px 32px; }
+  .cover { border-bottom: 3px solid #1a1a1a; margin-bottom: 24px; padding-bottom: 16px; }
+  .cover-title { font-family: Georgia, serif; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .cover-meta { font-size: 11px; color: #555; margin-top: 6px; line-height: 1.7; }
+  .cover-meta span { display: inline-block; margin-right: 20px; }
+  .cover-grammar { margin-top: 12px; background: #f5f5f5; border-left: 4px solid #1a1a1a; padding: 8px 12px; white-space: pre-wrap; font-size: 11px; line-height: 1.6; }
+  h2 { font-family: Georgia, serif; font-size: 15px; margin: 24px 0 10px; border-bottom: 2px solid #1a1a1a; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 8px; }
+  th { background: #1a1a1a; color: #fff; padding: 6px 10px; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid #1a1a1a; }
+  td { padding: 5px 10px; border: 1px solid #ccc; color: #333; }
+  tr:nth-child(even) td { background: #f9f9f9; }
+  td.rowhead { background: #f0f0f0; font-weight: 700; color: #1a1a1a; }
+  td.shift { color: #0057b7; font-weight: 700; }
+  td.reduce { color: #006600; font-weight: 700; }
+  td.accept { background: #e6ffe6 !important; color: #006600; font-weight: 700; }
+  td.goto { color: #6b21a8; font-weight: 700; }
+  td.conflict { background: #ffe0e0; color: #cc0000; font-weight: 700; }
+  .legend { font-size: 10px; color: #555; margin: 6px 0 16px; }
+  .s-leg { color: #0057b7; font-weight: 700; }
+  .r-leg { color: #006600; font-weight: 700; }
+  .g-leg { color: #6b21a8; font-weight: 700; }
+  table.prod-table { width: auto; }
+  table.prod-table td { border: none; padding: 2px 8px; }
+  td.prod-num { color: #888; font-size: 10px; text-align: right; min-width: 28px; }
+  .states-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+  .state-card { border: 1px solid #ccc; padding: 8px; background: #fafafa; }
+  .state-title { font-weight: 700; font-size: 12px; border-bottom: 1px solid #ddd; margin-bottom: 4px; padding-bottom: 3px; }
+  .state-item { font-size: 10px; color: #444; line-height: 1.5; }
+  .footer { margin-top: 32px; border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #aaa; }
+  @media print {
+    body { padding: 0; }
+    @page { margin: 18mm 15mm; size: A4; }
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="cover-title">ParserLab — Tablas de Análisis Sintáctico</div>
+  <div class="cover-meta">
+    <span><strong>Parser:</strong> ${parserLabel}</span>
+    <span><strong>Cadena:</strong> ${inputStr || '(ninguna)'}</span>
+    <span><strong>Resultado:</strong> ${r.success ? '✓ Aceptada' : '✗ Rechazada'}</span>
+    <span><strong>Fecha:</strong> ${dateStr}</span>
+  </div>
+  <div class="cover-grammar">${grammarText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+</div>
+${tablesHtml}
+<div class="footer">CS3402 Compiladores · UTEC 2026-1 · The Ultimate Parser App</div>
+</body>
+</html>`);
+    win.document.close();
+    win.focus();
+    win.print();
 }
 
 function renderConflicts() {
