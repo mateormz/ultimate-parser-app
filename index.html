@@ -7,6 +7,23 @@
     <meta name="description" content="Aplicación interactiva para análisis sintáctico con 6 tipos de parsers: Descenso Recursivo, LL(1), LR(0), SLR(1), LALR(1), LR(1). Visualizaciones, tablas, paso a paso.">
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⟦⟧</text></svg>">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#d97706">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ParserLab">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.warn('Service worker registration failed:', err);
+                });
+            });
+        }
+    </script>
 </head>
 <body>
 
@@ -247,6 +264,7 @@ F -> ( E ) | id</textarea>
                         <button class="tab" data-tab="conflicts" id="tab-conflicts">Conflictos <span class="tab-badge" style="display:none;">0</span></button>
                         <button class="tab" data-tab="analysis">Análisis</button>
                         <button class="tab" data-tab="ai">IA</button>
+                        <button class="tab" data-tab="history">Historial <span class="tab-badge" id="history-badge" style="display:none;">0</span></button>
                     </div>
 
                     <!-- Parse Tree tab -->
@@ -350,6 +368,20 @@ F -> ( E ) | id</textarea>
                     <div class="tab-panel" data-panel="analysis">
                         <div id="analysis-panel">
                             <p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">Pulsa <strong>Analizar gramática</strong> para ver FIRST, FOLLOW, propiedades.</p>
+                        </div>
+                    </div>
+
+                    <!-- History tab -->
+                    <div class="tab-panel" data-panel="history">
+                        <div class="history-toolbar">
+                            <div class="history-summary">
+                                <strong id="history-count">0</strong> análisis guardados
+                                <span class="history-hint">— pulsa en una entrada para restaurar gramática y cadena</span>
+                            </div>
+                            <button id="clear-history-btn" class="btn-secondary-sm">Limpiar historial</button>
+                        </div>
+                        <div id="history-list" class="history-list">
+                            <p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">Aún no hay análisis guardados. Pulsa <strong>Parsear</strong> para crear el primero.</p>
                         </div>
                     </div>
 
