@@ -644,6 +644,56 @@ body::before {
 }
 .tab-panel.active { display: block; }
 
+.diagram-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.diagram-toolbar,
+.zoom-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.diagram-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+}
+.zoom-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.zoom-btn {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+.zoom-btn:hover {
+    background: var(--accent);
+    color: var(--paper);
+}
+.zoom-value,
+.zoom-label {
+    min-width: 52px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-faded);
+}
+
 /* ===== Tables ===== */
 .table-wrap {
     overflow: auto;
@@ -799,6 +849,29 @@ table.parser-table th:first-child { background: var(--ink); color: var(--accent)
     justify-content: center;
     align-items: flex-start;
     min-height: 300px;
+}
+
+.zoom-window {
+    height: min(62vh, 500px);
+    min-height: 420px;
+    max-height: none;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+}
+.zoom-window.dragging {
+    cursor: grabbing;
+}
+.mermaid-container.zoom-window {
+    display: block;
+}
+.zoom-content {
+    display: inline-block;
+    transform-origin: 0 0;
+    transition: transform 0.06s ease-out;
+}
+.zoom-content svg {
+    display: block;
 }
 .mermaid {
     font-family: var(--font-mono) !important;
