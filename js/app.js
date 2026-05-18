@@ -112,6 +112,13 @@ Factor -> ( Exp ) | id | num`,
 };
 
 // ============================================================================
+// Zoom configuration
+// ============================================================================
+const ZOOM_STEP = 0.1;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.0;
+
+// ============================================================================
 // State
 // ============================================================================
 const state = {
@@ -121,6 +128,10 @@ const state = {
     result: null,
     currentStep: 0,
     activeTab: 'ast',
+    zoom: {
+        ast: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+        automaton: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+    },
 };
 
 // ============================================================================
@@ -143,19 +154,139 @@ function setHTML(sel, html) {
 function renderMermaid(targetSel, code) {
     const el = $(targetSel);
     if (!el) return;
-    el.innerHTML = `<div class="mermaid">${code}</div>`;
+    const target = el.id.replace('-container', '');
+    el.innerHTML = `<div class="zoom-content"><div class="mermaid">${code}</div></div>`;
     if (window.mermaid) {
         const id = 'mermaid-' + Date.now();
         try {
             window.mermaid.render(id, code).then(({ svg }) => {
-                el.innerHTML = svg;
+                ensureZoomContent(el).innerHTML = svg;
+                applyPanZoom(target);
             }).catch(err => {
-                el.innerHTML = `<div class="error-card"><h4>Error renderizando diagrama</h4><p>${err.message}</p></div>`;
+                el.innerHTML = `<div class="zoom-content"><div class="error-card"><h4>Error renderizando diagrama</h4><p>${err.message}</p></div></div>`;
+                applyPanZoom(target);
             });
         } catch (e) {
-            el.innerHTML = `<div class="error-card"><h4>Error renderizando diagrama</h4><p>${e.message}</p></div>`;
+            el.innerHTML = `<div class="zoom-content"><div class="error-card"><h4>Error renderizando diagrama</h4><p>${e.message}</p></div></div>`;
+            applyPanZoom(target);
         }
     }
+}
+
+function changeDiagramZoom(target, action) {
+    if (!state.zoom[target]) resetPanZoom(target);
+    if (action === 'zoom-in') zoomAtCenter(target, 1 + ZOOM_STEP);
+    else if (action === 'zoom-out') zoomAtCenter(target, 1 - ZOOM_STEP);
+    else if (action === 'zoom-reset') resetPanZoom(target);
+}
+
+function updateDiagramZoomDisplay(target) {
+    const label = $(`#${target}-zoom-value`);
+    if (!label) return;
+    const value = state.zoom[target]?.scale || 1;
+    label.textContent = `${Math.round(value * 100)}%`;
+}
+
+function setupZoomControls() {
+    $$('.zoom-btn').forEach(btn => {
+        btn.addEventListener('click', () => changeDiagramZoom(btn.dataset.target, btn.dataset.action));
+    });
+    setupPanZoomFor('ast');
+    setupPanZoomFor('automaton');
+}
+
+function setupPanZoomFor(target) {
+    const container = $(`#${target}-container`);
+    if (!container) return;
+    container.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const factor = event.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
+        zoomAtPoint(target, factor, event.clientX, event.clientY);
+    }, { passive: false });
+    container.addEventListener('mousedown', (event) => {
+        if (event.button !== 0) return;
+        const zoomState = getPanZoomState(target);
+        zoomState.isDragging = true;
+        zoomState.startX = event.clientX - zoomState.x;
+        zoomState.startY = event.clientY - zoomState.y;
+        container.classList.add('dragging');
+        event.preventDefault();
+    });
+    document.addEventListener('mousemove', (event) => {
+        const zoomState = getPanZoomState(target);
+        if (!zoomState.isDragging) return;
+        zoomState.x = event.clientX - zoomState.startX;
+        zoomState.y = event.clientY - zoomState.startY;
+        applyPanZoom(target);
+    });
+    document.addEventListener('mouseup', () => {
+        const zoomState = getPanZoomState(target);
+        if (!zoomState.isDragging) return;
+        zoomState.isDragging = false;
+        container.classList.remove('dragging');
+    });
+}
+
+function applyPanZoom(target) {
+    const container = $(`#${target}-container`);
+    if (!container) return;
+    const content = ensureZoomContent(container);
+    const zoomState = getPanZoomState(target);
+    content.style.transform = `translate(${zoomState.x}px, ${zoomState.y}px) scale(${zoomState.scale})`;
+    updateDiagramZoomDisplay(target);
+}
+
+function zoomAtCenter(target, factor) {
+    const container = $(`#${target}-container`);
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    zoomAtPoint(target, factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+function resetPanZoom(target) {
+    state.zoom[target] = { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
+    const container = $(`#${target}-container`);
+    if (container) container.classList.remove('dragging');
+    applyPanZoom(target);
+}
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function zoomAtPoint(target, factor, clientX, clientY) {
+    const container = $(`#${target}-container`);
+    if (!container) return;
+    const zoomState = getPanZoomState(target);
+    const oldScale = zoomState.scale;
+    const newScale = Number(clamp(oldScale * factor, ZOOM_MIN, ZOOM_MAX).toFixed(3));
+    if (newScale === oldScale) return;
+
+    const rect = container.getBoundingClientRect();
+    const pointX = clientX - rect.left;
+    const pointY = clientY - rect.top;
+    zoomState.x = pointX - ((pointX - zoomState.x) / oldScale) * newScale;
+    zoomState.y = pointY - ((pointY - zoomState.y) / oldScale) * newScale;
+    zoomState.scale = newScale;
+    applyPanZoom(target);
+}
+
+function getPanZoomState(target) {
+    if (!state.zoom[target] || typeof state.zoom[target] === 'number') {
+        state.zoom[target] = { scale: state.zoom[target] || 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
+    }
+    return state.zoom[target];
+}
+
+function ensureZoomContent(container) {
+    let content = container.querySelector('.zoom-content');
+    if (!content) {
+        content = document.createElement('div');
+        content.className = 'zoom-content';
+        while (container.firstChild) content.appendChild(container.firstChild);
+        container.appendChild(content);
+    }
+    return content;
 }
 
 // ============================================================================
@@ -181,6 +312,7 @@ function init() {
     $('#step-next').addEventListener('click', () => goToStep(state.currentStep + 1));
     $('#step-last').addEventListener('click', () => goToStep(state.result?.trace?.length - 1 || 0));
     $('#step-play').addEventListener('click', autoPlay);
+    setupZoomControls();
 
     // Teclado virtual
     $$('.virtual-key').forEach(key => {
@@ -189,6 +321,8 @@ function init() {
 
     // Inicialmente seleccionar parser LL(1)
     selectParser('ll1');
+    applyPanZoom('ast');
+    applyPanZoom('automaton');
 }
 
 function selectExample(key) {
@@ -366,6 +500,8 @@ function setStatus(cls, text, detail) {
 function renderResults() {
     const r = state.result;
     if (!r) return;
+    resetPanZoom('ast');
+    resetPanZoom('automaton');
 
     // Result Summary
     let summary = '';
@@ -381,7 +517,8 @@ function renderResults() {
         const mermaidCode = Visualizers.astToMermaid(r.ast);
         renderMermaid('#ast-container', mermaidCode);
     } else {
-        $('#ast-container').innerHTML = '<p style="color: var(--ink-faded); text-align: center; padding: 40px; font-family: var(--font-mono);">No hay AST disponible (parseo falló)</p>';
+        $('#ast-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); text-align: center; padding: 40px; font-family: var(--font-mono);">No hay AST disponible (parseo falló)</p></div>';
+        applyPanZoom('ast');
     }
 
     // Trace step-by-step
@@ -608,7 +745,8 @@ function renderConflicts() {
 function renderAutomaton() {
     const r = state.result;
     if (!r.states || !r.transitions) {
-        $('#automaton-container').innerHTML = '<p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">El autómata solo está disponible para parsers LR.</p>';
+        $('#automaton-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">El autómata solo está disponible para parsers LR.</p></div>';
+        applyPanZoom('automaton');
         return;
     }
     const mermaidCode = Visualizers.automatonToMermaid(r.states, r.transitions, state.parserInstance);

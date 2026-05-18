@@ -249,8 +249,21 @@ F -> ( E ) | id</textarea>
 
                     <!-- AST tab -->
                     <div class="tab-panel active" data-panel="ast">
-                        <div id="ast-container" class="mermaid-container">
-                            <p style="color: var(--ink-faded); padding: 40px; font-family: var(--font-mono);">Pulsa <strong>Parsear</strong> para ver el árbol.</p>
+                        <div class="diagram-panel">
+                            <div class="diagram-toolbar zoom-toolbar">
+                                <div class="diagram-title">AST</div>
+                                <div class="zoom-controls">
+                                    <button class="zoom-btn" data-target="ast" data-action="zoom-out" title="Alejar">−</button>
+                                    <span class="zoom-value zoom-label" id="ast-zoom-value">100%</span>
+                                    <button class="zoom-btn" data-target="ast" data-action="zoom-in" title="Acercar">＋</button>
+                                    <button class="zoom-btn" data-target="ast" data-action="zoom-reset" title="Restablecer">Reset</button>
+                                </div>
+                            </div>
+                            <div id="ast-container" class="mermaid-container zoom-window">
+                                <div class="zoom-content">
+                                <p style="color: var(--ink-faded); padding: 40px; font-family: var(--font-mono);">Pulsa <strong>Parsear</strong> para ver el árbol.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -282,8 +295,21 @@ F -> ( E ) | id</textarea>
 
                     <!-- Automaton tab -->
                     <div class="tab-panel" data-panel="automaton">
-                        <div id="automaton-container" class="mermaid-container">
-                            <p style="color: var(--ink-faded); padding: 40px; font-family: var(--font-mono);">El autómata LR aparecerá aquí (solo para parsers LR).</p>
+                        <div class="diagram-panel">
+                            <div class="diagram-toolbar zoom-toolbar">
+                                <div class="diagram-title">Autómata</div>
+                                <div class="zoom-controls">
+                                    <button class="zoom-btn" data-target="automaton" data-action="zoom-out" title="Alejar">−</button>
+                                    <span class="zoom-value zoom-label" id="automaton-zoom-value">100%</span>
+                                    <button class="zoom-btn" data-target="automaton" data-action="zoom-in" title="Acercar">＋</button>
+                                    <button class="zoom-btn" data-target="automaton" data-action="zoom-reset" title="Restablecer">Reset</button>
+                                </div>
+                            </div>
+                            <div id="automaton-container" class="mermaid-container zoom-window">
+                                <div class="zoom-content">
+                                <p style="color: var(--ink-faded); padding: 40px; font-family: var(--font-mono);">El autómata LR aparecerá aquí (solo para parsers LR).</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
