@@ -11,6 +11,7 @@ class LRBase {
     constructor(grammar) {
         this.originalGrammar = grammar;
         this.grammar = grammar.augment();
+        this.wasAutoAugmented = this.grammar.wasAutoAugmented;
         this.states = [];      // Array de itemsets
         this.transitions = {}; // transitions[stateIdx][symbol] = stateIdx
         this.action = {};      // action[stateIdx][terminal] = {type, value}
@@ -262,7 +263,10 @@ class LRBase {
             })),
             transitions: this.transitions,
             conflicts: this.conflicts,
-            productions: this.grammar.productions
+            productions: this.grammar.productions,
+            wasAutoAugmented: this.wasAutoAugmented,
+            augmentedStart: this.wasAutoAugmented ? this.grammar.startSymbol : null,
+            originalStart: this.originalGrammar.startSymbol
         };
     }
 }

@@ -1,3 +1,4 @@
 .env
 .env.local
 server/.env
+CLAUDE.md

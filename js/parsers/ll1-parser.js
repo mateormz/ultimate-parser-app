@@ -83,7 +83,7 @@ class LL1Parser {
 
             const step = {
                 step: stepNum,
-                stack: [...stack].reverse().join(' '),
+                stack: [...stack].join(' '),
                 input: tokens.slice(pos).join(' '),
                 action: ''
             };
