@@ -52,6 +52,8 @@ python3 -m http.server 8000
 - ✅ **Teclado virtual** para símbolos especiales (`ε`, `→`, `|`, `'`)
 - ✅ **Sugerencias de error** en lenguaje natural
 - ✅ **IA integrada** (pestaña IA): analiza la gramática con GPT-4.1-mini vía GitHub Models, explica conflictos y propone una gramática corregida que puedes aplicar con un solo clic
+- ✅ **Historial de análisis** (pestaña Historial): cada parseo se guarda en `localStorage` con parser, gramática, cadena y resultado. Click en una entrada para restaurar gramática + cadena en los textareas (luego pulsa Parsear). Botón **Limpiar historial** para borrarlo todo. Persiste los últimos 50 análisis entre sesiones.
+- ✅ **PWA (Progressive Web App):** instalable desde el navegador (móvil y escritorio), modo `standalone` sin barra de navegador, funciona offline. Un Service Worker (`sw.js`) cachea HTML/CSS/JS locales con estrategia *cache-first*; las llamadas a `/api/` (IA) siempre van a la red y no se cachean. Requiere servidor (no funciona con `file://`).
 
 ---
 
@@ -114,6 +116,9 @@ gh repo create --public --source=. --push
 ```
 parser-app/
 ├── index.html              # UI completa (single-page)
+├── manifest.json           # PWA manifest (nombre, theme, display standalone, icon)
+├── icon.svg                # Icono PWA + apple-touch-icon
+├── sw.js                   # Service Worker (cache-first locales, bypass /api/*)
 ├── css/style.css           # Estilos (Technical Editorial aesthetic)
 ├── api/
 │   └── grammar-ai.js       # Vercel serverless function — llama a GitHub Models (GPT-4.1-mini)

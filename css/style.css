@@ -208,8 +208,16 @@ body::before {
     position: relative;
 }
 .hero-title .marker {
-    background: var(--accent-soft);
+    /* Highlighter-style band: transparent above/below the text band so the
+       highlight does NOT bleed into the previous line when line-height < 1. */
+    background: linear-gradient(180deg,
+        transparent 0%,
+        transparent 12%,
+        var(--accent-soft) 12%,
+        var(--accent-soft) 100%);
     padding: 0 8px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
 }
 .hero-subtitle {
     font-size: 20px;
