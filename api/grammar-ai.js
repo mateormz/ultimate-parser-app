@@ -116,7 +116,13 @@ Formato de respuesta:
 - Usa Markdown.
 - Usa como máximo 3 secciones.
 - Usa títulos con ## solo si son necesarios.
-- Usa bloques de código solo para mostrar una gramática corregida.
+- Si propones una gramática corregida, inclúyela obligatoriamente en un bloque de código con el lenguaje exacto \`suggested-grammar\`.
+- El bloque debe tener exactamente esta forma:
+\`\`\`suggested-grammar
+S -> ...
+A -> ...
+\`\`\`
+- No uses \`suggested-grammar\` si no estás proponiendo una gramática corregida.
 - No uses HTML.
 - No uses JSON.
 
@@ -134,7 +140,7 @@ Si hay conflictos:
 Explica el conflicto y la causa probable.
 
 Si hay propuesta:
-Incluye la gramática corregida en un bloque de código.
+Incluye la gramática corregida en un bloque \`\`\`suggested-grammar.
 
 Contexto recibido:
 
