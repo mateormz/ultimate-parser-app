@@ -984,6 +984,20 @@ table.trace-table .lr-state { color: #dc2626; }
     font-size: 13px;
 }
 
+.info-card {
+    background: var(--accent-soft);
+    border: 2px solid var(--accent);
+    color: var(--ink-soft);
+    padding: 18px 20px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 720px;
+}
+.ast-info-card {
+    margin: 40px;
+}
+
 /* ===== Grammar Analysis ===== */
 .analysis-grid {
     display: grid;
