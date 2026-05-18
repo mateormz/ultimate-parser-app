@@ -885,7 +885,7 @@ async function askGrammarAI() {
         }
 
         console.log('GitHub Models rate limit:', data.rateLimit);
-        responseEl.innerHTML = `<div class="ai-answer">${escapeHTML(data.answer || 'Sin respuesta.').replace(/\n/g, '<br>')}</div>`;
+        responseEl.innerHTML = `<div class="ai-answer">${renderMarkdown(data.answer || 'Sin respuesta.')}</div>`;
     } catch (e) {
         responseEl.innerHTML = `<div class="error-card"><h4>No se pudo consultar la IA</h4><p>${escapeHTML(e.message)}</p></div>`;
     }
@@ -907,6 +907,16 @@ function escapeHTML(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function renderMarkdown(markdown) {
+    if (window.marked && window.DOMPurify) {
+        return window.DOMPurify.sanitize(window.marked.parse(markdown));
+    }
+    if (window.marked) {
+        return window.marked.parse(markdown);
+    }
+    return escapeHTML(markdown).replace(/\n/g, '<br>');
 }
 
 // ============================================================================
