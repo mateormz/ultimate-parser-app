@@ -380,6 +380,7 @@ function renderResults() {
         const sp = r.tables.augmentedStart;
         summary += `<div class="augment-notice">La gramática fue aumentada automáticamente: se añadió <code>${sp} → ${s}</code> como nuevo símbolo inicial.</div>`;
     }
+
     $('#result-summary').innerHTML = summary;
 
     // AST

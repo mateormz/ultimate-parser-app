@@ -159,7 +159,7 @@ class LL1Parser {
             }
             trace.push(step);
 
-            if (stepNum > 10000) {
+            if (stepNum > 100) {
                 return {
                     success: false,
                     error: 'Demasiados pasos. Posible bucle infinito.',
