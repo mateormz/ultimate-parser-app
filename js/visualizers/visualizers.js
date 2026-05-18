@@ -43,6 +43,118 @@ function astToMermaid(ast) {
     return lines.concat(styles).join('\n');
 }
 
+function parseTreeToAst(parseTree) {
+    if (!parseTree) return null;
+
+    const tokens = collectTerminalTokens(parseTree);
+    const expressionTokens = tokens.filter(t => t !== '$');
+    const hasExpressionOperator = expressionTokens.some(t => ['+', '-', '*', '/', '**'].includes(t));
+
+    if (expressionTokens[0] === 'print') {
+        const args = extractPrintArgs(expressionTokens);
+        return {
+            name: 'print',
+            children: args.length > 0 ? args.map(parseExpressionTokens).filter(Boolean) : []
+        };
+    }
+
+    if (hasExpressionOperator || expressionTokens.includes('(')) {
+        const ast = parseExpressionTokens(expressionTokens);
+        if (ast) return ast;
+    }
+
+    return simplifyParseTree(parseTree) || { name: 'AST vacío', leaf: true, children: [] };
+}
+
+function collectTerminalTokens(node) {
+    if (!node) return [];
+    const children = node.children || [];
+    if (node.leaf || children.length === 0) {
+        return isIgnoredAstToken(node.name) ? [] : [node.token || node.name];
+    }
+    return children.flatMap(collectTerminalTokens);
+}
+
+function extractPrintArgs(tokens) {
+    const openIdx = tokens.indexOf('(');
+    const closeIdx = tokens.lastIndexOf(')');
+    if (openIdx === -1 || closeIdx === -1 || closeIdx <= openIdx) {
+        return [tokens.slice(1)];
+    }
+
+    const inside = tokens.slice(openIdx + 1, closeIdx);
+    const args = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < inside.length; i++) {
+        if (inside[i] === '(') depth++;
+        else if (inside[i] === ')') depth--;
+        else if (inside[i] === ',' && depth === 0) {
+            args.push(inside.slice(start, i));
+            start = i + 1;
+        }
+    }
+    args.push(inside.slice(start));
+    return args.filter(arg => arg.length > 0);
+}
+
+function parseExpressionTokens(tokens) {
+    let pos = 0;
+    const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '**': 3 };
+
+    function parseExpression(minPrec = 0) {
+        let left = parsePrimary();
+        if (!left) return null;
+
+        while (pos < tokens.length) {
+            const op = tokens[pos];
+            const prec = precedence[op];
+            if (!prec || prec < minPrec) break;
+
+            pos++;
+            const nextMinPrec = op === '**' ? prec : prec + 1;
+            const right = parseExpression(nextMinPrec);
+            if (!right) break;
+            left = { name: op, children: [left, right] };
+        }
+        return left;
+    }
+
+    function parsePrimary() {
+        const token = tokens[pos++];
+        if (!token || token === ')' || token === ',') return null;
+        if (token === '(') {
+            const expr = parseExpression(0);
+            if (tokens[pos] === ')') pos++;
+            return expr;
+        }
+        return { name: token, leaf: true, children: [] };
+    }
+
+    return parseExpression(0);
+}
+
+function simplifyParseTree(node) {
+    if (!node || isIgnoredAstToken(node.name)) return null;
+
+    const children = (node.children || [])
+        .map(simplifyParseTree)
+        .filter(Boolean);
+
+    if (node.leaf) {
+        return { name: node.token || node.name, leaf: true, children: [] };
+    }
+    if (children.length === 0) return null;
+    if (children.length === 1) {
+        return children[0];
+    }
+    return { name: node.name, children };
+}
+
+function isIgnoredAstToken(value) {
+    return value === 'ε' || value === 'Îµ' || value === '$';
+}
+
 function automatonToMermaid(states, transitions, parser, options = {}) {
     const expanded = options.expanded === true;
     const lines = ['graph LR'];
@@ -70,4 +182,4 @@ function automatonToMermaid(states, transitions, parser, options = {}) {
     return lines.join('\n');
 }
 
-window.Visualizers = { astToMermaid, automatonToMermaid };
+window.Visualizers = { astToMermaid, parseTreeToAst, automatonToMermaid };

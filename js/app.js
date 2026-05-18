@@ -128,10 +128,11 @@ const state = {
     parserInstance: null,
     result: null,
     currentStep: 0,
-    activeTab: 'ast',
+    activeTab: 'parse-tree',
     automatonExpanded: false,
     zoom: {
         ast: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+        realAst: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
         automaton: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
     },
 };
@@ -195,6 +196,7 @@ function setupZoomControls() {
         btn.addEventListener('click', () => changeDiagramZoom(btn.dataset.target, btn.dataset.action));
     });
     setupPanZoomFor('ast');
+    setupPanZoomFor('realAst');
     setupPanZoomFor('automaton');
 }
 
@@ -247,8 +249,9 @@ function zoomAtCenter(target, factor) {
 }
 
 function resetPanZoom(target) {
-    const centered = getCenteredPanZoom(target, ZOOM_DEFAULT);
-    state.zoom[target] = { scale: ZOOM_DEFAULT, x: centered.x, y: centered.y, isDragging: false, startX: 0, startY: 0 };
+    const defaultScale = getDefaultZoomScale(target);
+    const centered = getCenteredPanZoom(target, defaultScale);
+    state.zoom[target] = { scale: defaultScale, x: centered.x, y: centered.y, isDragging: false, startX: 0, startY: 0 };
     const container = $(`#${target}-container`);
     if (container) container.classList.remove('dragging');
     applyPanZoom(target);
@@ -277,11 +280,15 @@ function zoomAtPoint(target, factor, clientX, clientY) {
 
 function getPanZoomState(target) {
     if (!state.zoom[target] || typeof state.zoom[target] === 'number') {
-        const scale = state.zoom[target] || ZOOM_DEFAULT;
+        const scale = state.zoom[target] || getDefaultZoomScale(target);
         const centered = getCenteredPanZoom(target, scale);
         state.zoom[target] = { scale, x: centered.x, y: centered.y, isDragging: false, startX: 0, startY: 0 };
     }
     return state.zoom[target];
+}
+
+function getDefaultZoomScale(target) {
+    return target === 'realAst' ? 1 : ZOOM_DEFAULT;
 }
 
 function getCenteredPanZoom(target, scale = 1) {
@@ -342,6 +349,7 @@ function init() {
     selectParser('ll1');
     updateAutomatonViewButton();
     applyPanZoom('ast');
+    applyPanZoom('realAst');
     applyPanZoom('automaton');
 }
 
@@ -523,6 +531,7 @@ function renderResults() {
     state.automatonExpanded = false;
     updateAutomatonViewButton();
     resetPanZoom('ast');
+    resetPanZoom('realAst');
     resetPanZoom('automaton');
 
     // Result Summary
@@ -534,13 +543,19 @@ function renderResults() {
     }
     $('#result-summary').innerHTML = summary;
 
-    // AST
+    // Parse Tree y AST real
     if (r.ast) {
-        const mermaidCode = Visualizers.astToMermaid(r.ast);
-        renderMermaid('#ast-container', mermaidCode);
+        const parseTreeCode = Visualizers.astToMermaid(r.ast);
+        renderMermaid('#ast-container', parseTreeCode);
+
+        const realAst = Visualizers.parseTreeToAst(r.ast);
+        const realAstCode = Visualizers.astToMermaid(realAst);
+        renderMermaid('#realAst-container', realAstCode);
     } else {
         $('#ast-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); text-align: center; padding: 40px; font-family: var(--font-mono);">No hay AST disponible (parseo falló)</p></div>';
+        $('#realAst-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); text-align: center; padding: 40px; font-family: var(--font-mono);">No hay AST disponible porque el parseo fallÃ³.</p></div>';
         applyPanZoom('ast');
+        applyPanZoom('realAst');
     }
 
     // Trace step-by-step
@@ -556,7 +571,7 @@ function renderResults() {
     renderAutomaton();
 
     // Cambiar a la primera pestaña visible útil
-    if (r.success) switchTab('ast');
+    if (r.success) switchTab('parse-tree');
     else switchTab('trace');
 
     // Actualizar contador
