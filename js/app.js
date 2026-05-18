@@ -130,6 +130,7 @@ const state = {
     currentStep: 0,
     activeTab: 'parse-tree',
     automatonExpanded: false,
+    aiSuggestedGrammar: '',
     zoom: {
         ast: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
         realAst: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
@@ -933,7 +934,12 @@ async function askGrammarAI() {
         }
 
         console.log('GitHub Models rate limit:', data.rateLimit);
-        responseEl.innerHTML = `<div class="ai-answer">${renderMarkdown(data.answer || 'Sin respuesta.')}</div>`;
+        state.aiSuggestedGrammar = extractSuggestedGrammar(data.answer || '');
+        responseEl.innerHTML = `
+            <div class="ai-answer">${renderMarkdown(data.answer || 'Sin respuesta.')}</div>
+            ${state.aiSuggestedGrammar ? '<button id="apply-suggested-grammar-btn" class="btn-secondary-sm ai-apply-btn">Aplicar gramática sugerida</button>' : ''}
+        `;
+        $('#apply-suggested-grammar-btn')?.addEventListener('click', applySuggestedGrammar);
     } catch (e) {
         responseEl.innerHTML = `<div class="error-card"><h4>No se pudo consultar la IA</h4><p>${escapeHTML(e.message)}</p></div>`;
     }
@@ -946,6 +952,23 @@ function serializeSets(sets) {
         out[key] = Array.isArray(value) ? value : [...value];
     }
     return out;
+}
+
+function extractSuggestedGrammar(markdown) {
+    const match = String(markdown).match(/```suggested-grammar\s*([\s\S]*?)```/i);
+    return match ? match[1].trim() : '';
+}
+
+function applySuggestedGrammar() {
+    if (!state.aiSuggestedGrammar) return;
+    const input = $('#grammar-input');
+    const responseEl = $('#ai-response');
+    if (!input || !responseEl) return;
+
+    input.value = state.aiSuggestedGrammar;
+    responseEl.insertAdjacentHTML('afterbegin', '<div class="success-card ai-applied-message"><div class="text"><h4>Gramática sugerida aplicada.</h4></div></div>');
+    analyzeGrammar();
+    switchTab('ai');
 }
 
 function escapeHTML(value) {

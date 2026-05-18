@@ -1022,6 +1022,14 @@ table.trace-table .lr-state { color: #dc2626; }
     align-self: flex-start;
     padding: 10px 14px;
 }
+.ai-apply-btn {
+    width: auto;
+    margin-top: 16px;
+    padding: 10px 14px;
+}
+.ai-applied-message {
+    margin-bottom: 14px;
+}
 .ai-response {
     border: 2px solid var(--ink);
     background: var(--paper);
