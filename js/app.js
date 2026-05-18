@@ -600,29 +600,71 @@ function suggestErrorFix(error) {
     return 'Revisa la gramática y la cadena de entrada. Asegúrate de que los tokens estén separados por espacios y que la cadena sea válida.';
 }
 
+function interleaveStackLR(stateStr, symStr) {
+    const states = stateStr.trim().split(/\s+/);
+    const syms = symStr ? symStr.trim().split(/\s+/).filter(s => s) : [];
+    const parts = [`<span class="lr-state">${states[0]}</span>`];
+    for (let i = 0; i < syms.length; i++) {
+        parts.push(syms[i]);
+        if (i + 1 < states.length) parts.push(`<span class="lr-state">${states[i + 1]}</span>`);
+    }
+    return parts.join(' ') || '∅';
+}
+
+function actionClass(action) {
+    if (!action) return '';
+    if (action.startsWith('✓')) return 'accept';
+    if (action.startsWith('✗')) return 'error';
+    if (action.startsWith('shift')) return 'shift';
+    if (action.startsWith('reduce')) return 'reduce';
+    if (action.startsWith('Match')) return 'match';
+    return '';
+}
+
 function renderTrace() {
     const r = state.result;
     if (!r || !r.trace || r.trace.length === 0) {
         $('#trace-list').innerHTML = '<p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">Sin pasos para mostrar</p>';
+        setText('#trace-total', 0);
         return;
     }
-    let html = '';
-    r.trace.forEach((step, i) => {
-        const isCurrent = i === state.currentStep;
-        let display = '';
-        if (step.step !== undefined) {
-            display = `<strong>Stack:</strong> ${step.stack || step.symStack || '∅'} &nbsp; <strong>→</strong> ${step.input || ''} &nbsp; <em>${step.action}</em>`;
-        } else {
-            display = step.message || '';
-        }
-        html += `<div class="trace-item ${isCurrent ? 'current' : ''}" data-step="${i}">
-            <span class="step-num">${i + 1}</span>
-            <span>${display}</span>
-        </div>`;
-    });
-    $('#trace-list').innerHTML = html;
 
-    // Click handlers
+    const isLR = ['lr0', 'slr1', 'lalr1', 'lr1'].includes(state.currentParser);
+    const isRD = state.currentParser === 'recursive-descent';
+
+    if (isRD) {
+        let html = '';
+        r.trace.forEach((step, i) => {
+            html += `<div class="trace-item ${i === state.currentStep ? 'current' : ''}" data-step="${i}">
+                <span class="step-num">${i + 1}</span>
+                <span>${step.message || ''}</span>
+            </div>`;
+        });
+        $('#trace-list').innerHTML = html;
+    } else {
+        let html = '<table class="trace-table"><thead><tr>';
+        html += '<th>#</th><th>Pila</th><th>Entrada</th><th>Acción</th>';
+        html += '</tr></thead><tbody>';
+
+        r.trace.forEach((step, i) => {
+            const pila = isLR
+                ? interleaveStackLR(step.stack, step.symStack)
+                : (step.stack || '∅');
+            const entrada = step.input || '$';
+            const accion = step.action || '—';
+            const cls = actionClass(accion);
+            html += `<tr class="trace-item ${i === state.currentStep ? 'current' : ''}" data-step="${i}">
+                <td class="step-num">${i + 1}</td>
+                <td><code>${pila}</code></td>
+                <td><code>${entrada}</code></td>
+                <td class="${cls}">${accion}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        $('#trace-list').innerHTML = html;
+    }
+
     $$('#trace-list .trace-item').forEach(el => {
         el.addEventListener('click', () => goToStep(parseInt(el.dataset.step)));
     });
@@ -826,14 +868,19 @@ function updateStepDisplay() {
         setText('#step-counter', '0 / 0');
         return;
     }
+
     const step = r.trace[state.currentStep];
+    const isLR = ['lr0', 'slr1', 'lalr1', 'lr1'].includes(state.currentParser);
+    const isRD = state.currentParser === 'recursive-descent';
+
     let html = `<h4>Paso ${state.currentStep + 1} de ${r.trace.length}</h4>`;
-    if (step.stack !== undefined || step.symStack !== undefined) {
-        html += `<div class="trace-row"><strong>Stack:</strong> <code>${step.symStack || step.stack || '∅'}</code></div>`;
-        if (step.stack !== undefined && step.symStack !== undefined && step.symStack !== step.stack) {
-            html += `<div class="trace-row"><strong>Estados:</strong> <code>${step.stack}</code></div>`;
-        }
-        html += `<div class="trace-row"><strong>Entrada:</strong> <code>${step.input || '∅'}</code></div>`;
+
+    if (!isRD && step.stack !== undefined) {
+        const pila = isLR
+            ? interleaveStackLR(step.stack, step.symStack)
+            : (step.stack || '∅');
+        html += `<div class="trace-row"><strong>Pila:</strong> <code>${pila}</code></div>`;
+        html += `<div class="trace-row"><strong>Entrada:</strong> <code>${step.input || '$'}</code></div>`;
         html += `<div class="trace-row"><strong>Acción:</strong> <code>${step.action || '—'}</code></div>`;
     } else {
         html += `<div class="trace-row"><strong>Mensaje:</strong> <code>${step.message || '—'}</code></div>`;
@@ -841,13 +888,15 @@ function updateStepDisplay() {
             html += `<div class="trace-row"><strong>Profundidad:</strong> <code>${step.depth}</code></div>`;
         }
     }
+
     $('#current-step-card').innerHTML = html;
     setText('#step-counter', `${state.currentStep + 1} / ${r.trace.length}`);
 
-    // Resaltar item current
     $$('#trace-list .trace-item').forEach((el, i) => {
         el.classList.toggle('current', i === state.currentStep);
-        if (i === state.currentStep && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (i === state.currentStep && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
     });
 }
 

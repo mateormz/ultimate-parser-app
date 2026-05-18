@@ -816,7 +816,7 @@ table.parser-table th:first-child { background: var(--ink); color: var(--accent)
     font-family: var(--font-mono);
     font-size: 12px;
     max-height: 600px;
-    overflow-y: auto;
+    overflow: auto;
     border: 2px solid var(--ink);
 }
 .trace-list .trace-item {
@@ -837,6 +837,52 @@ table.parser-table th:first-child { background: var(--ink); color: var(--accent)
     color: var(--ink-faded);
     font-weight: 600;
 }
+
+/* ===== Trace table (LL1 / LR table format) ===== */
+table.trace-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--paper);
+}
+table.trace-table th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--ink);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+table.trace-table td {
+    padding: 7px 12px;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+table.trace-table td code {
+    background: transparent;
+    color: var(--ink);
+    white-space: nowrap;
+}
+table.trace-table tr:nth-child(even) td { background: var(--paper-deep); }
+table.trace-table tr.trace-item { display: table-row; cursor: pointer; transition: background 0.1s; }
+table.trace-table tr.trace-item:hover td { background: var(--paper-deep) !important; }
+table.trace-table tr.current td { background: var(--accent-soft) !important; }
+table.trace-table tr.current td:first-child { border-left: 4px solid var(--accent); padding-left: 8px; }
+table.trace-table td.step-num { color: var(--ink-faded); font-weight: 600; width: 36px; text-align: center; }
+table.trace-table td.shift   { color: var(--accent-dark);   font-weight: 600; }
+table.trace-table td.reduce  { color: var(--circuit-dark);  font-weight: 600; }
+table.trace-table td.accept  { color: var(--circuit-dark);  font-weight: 700; }
+table.trace-table td.match   { color: var(--accent-dark); }
+table.trace-table td.error   { color: #dc2626; font-weight: 600; }
+table.trace-table .lr-state { color: #dc2626; }
 
 /* ===== Mermaid Container ===== */
 .mermaid-container {
