@@ -129,6 +129,7 @@ const state = {
     result: null,
     currentStep: 0,
     activeTab: 'ast',
+    automatonExpanded: false,
     zoom: {
         ast: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
         automaton: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
@@ -190,6 +191,7 @@ function updateDiagramZoomDisplay(target) {
 
 function setupZoomControls() {
     $$('.zoom-btn').forEach(btn => {
+        if (!btn.dataset.target || !btn.dataset.action) return;
         btn.addEventListener('click', () => changeDiagramZoom(btn.dataset.target, btn.dataset.action));
     });
     setupPanZoomFor('ast');
@@ -328,6 +330,7 @@ function init() {
     $('#step-next').addEventListener('click', () => goToStep(state.currentStep + 1));
     $('#step-last').addEventListener('click', () => goToStep(state.result?.trace?.length - 1 || 0));
     $('#step-play').addEventListener('click', autoPlay);
+    $('#toggle-automaton-view-btn')?.addEventListener('click', toggleAutomatonView);
     setupZoomControls();
 
     // Teclado virtual
@@ -337,6 +340,7 @@ function init() {
 
     // Inicialmente seleccionar parser LL(1)
     selectParser('ll1');
+    updateAutomatonViewButton();
     applyPanZoom('ast');
     applyPanZoom('automaton');
 }
@@ -516,6 +520,8 @@ function setStatus(cls, text, detail) {
 function renderResults() {
     const r = state.result;
     if (!r) return;
+    state.automatonExpanded = false;
+    updateAutomatonViewButton();
     resetPanZoom('ast');
     resetPanZoom('automaton');
 
@@ -763,10 +769,29 @@ function renderAutomaton() {
     if (!r.states || !r.transitions) {
         $('#automaton-container').innerHTML = '<div class="zoom-content"><p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">El autómata solo está disponible para parsers LR.</p></div>';
         applyPanZoom('automaton');
+        updateAutomatonViewButton();
         return;
     }
-    const mermaidCode = Visualizers.automatonToMermaid(r.states, r.transitions, state.parserInstance);
+    updateAutomatonViewButton();
+    const mermaidCode = Visualizers.automatonToMermaid(
+        r.states,
+        r.transitions,
+        state.parserInstance,
+        { expanded: state.automatonExpanded }
+    );
     renderMermaid('#automaton-container', mermaidCode);
+}
+
+function toggleAutomatonView() {
+    state.automatonExpanded = !state.automatonExpanded;
+    updateAutomatonViewButton();
+    if (state.result) renderAutomaton();
+}
+
+function updateAutomatonViewButton() {
+    const btn = $('#toggle-automaton-view-btn');
+    if (!btn) return;
+    btn.textContent = state.automatonExpanded ? 'Vista compacta' : 'Vista expandida';
 }
 
 // ============================================================================

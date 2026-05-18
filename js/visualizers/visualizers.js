@@ -43,17 +43,21 @@ function astToMermaid(ast) {
     return lines.concat(styles).join('\n');
 }
 
-function automatonToMermaid(states, transitions, parser) {
+function automatonToMermaid(states, transitions, parser, options = {}) {
+    const expanded = options.expanded === true;
     const lines = ['graph LR'];
     lines.push('  classDef stateNode fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3730a3');
     for (let i = 0; i < states.length; i++) {
         const stateLabel = `I${i}`;
-        // Listar items resumidos (máx 4 para no saturar)
+        // Compacto por defecto; expandido cuando se solicita desde la UI.
         let preview = '';
         if (parser) {
-            const itemStrs = states[i].slice(0, 3).map(it => parser.itemToString(it));
+            const visibleItems = expanded ? states[i] : states[i].slice(0, 3);
+            const itemStrs = visibleItems.map(it => parser.itemToString(it));
             preview = itemStrs.join('<br/>');
-            if (states[i].length > 3) preview += `<br/>... +${states[i].length - 3} más`;
+            if (!expanded && states[i].length > 3) {
+                preview += `<br/>... +${states[i].length - 3} m&aacute;s`;
+            }
         }
         const label = preview ? `${stateLabel}<br/><font size='1'>${preview.replace(/"/g, "'")}</font>` : stateLabel;
         lines.push(`  S${i}["${label}"]:::stateNode`);
