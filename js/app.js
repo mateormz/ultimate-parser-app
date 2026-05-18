@@ -111,6 +111,12 @@ Factor -> ( Exp ) | id | num`,
 };
 
 // ============================================================================
+// History (persisted in localStorage)
+// ============================================================================
+const HISTORY_KEY = 'parserlab.history.v1';
+const MAX_HISTORY = 50;
+
+// ============================================================================
 // Zoom configuration
 // ============================================================================
 const ZOOM_STEP = 0.1;
@@ -130,6 +136,7 @@ const state = {
     activeTab: 'parse-tree',
     automatonExpanded: false,
     aiSuggestedGrammar: '',
+    history: [],
     zoom: {
         ast: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
         realAst: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
@@ -361,7 +368,12 @@ function init() {
     $('#toggle-automaton-view-btn')?.addEventListener('click', toggleAutomatonView);
     $('#export-pdf-btn')?.addEventListener('click', exportTablesPDF);
     $('#ask-ai-btn')?.addEventListener('click', askGrammarAI);
+    $('#clear-history-btn')?.addEventListener('click', clearHistory);
     setupZoomControls();
+
+    // Cargar historial persistido
+    loadHistory();
+    renderHistory();
 
     // Teclado virtual
     $$('.virtual-key').forEach(key => {
@@ -549,10 +561,28 @@ function runParse() {
         } else {
             setStatus('error', '✗ Cadena rechazada', result.error.substring(0, 80) + (result.error.length > 80 ? '…' : ''));
         }
+
+        recordHistory({
+            parser: parserKey,
+            grammar: grammarText,
+            input,
+            success: !!result.success,
+            error: result.success ? null : (result.error || null),
+            timestamp: Date.now(),
+        });
     } catch (e) {
         setStatus('error', 'Error', e.message);
         $('#analysis-panel').innerHTML = `<div class="error-card"><h4>Error</h4><p>${e.message}</p></div>`;
         switchTab('analysis');
+
+        recordHistory({
+            parser: parserKey,
+            grammar: grammarText,
+            input,
+            success: false,
+            error: e.message || 'Error',
+            timestamp: Date.now(),
+        });
     }
 }
 
@@ -1241,6 +1271,119 @@ function switchTab(tabName) {
     state.activeTab = tabName;
     $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
     $$('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tabName));
+}
+
+// ============================================================================
+// Historial de análisis (persistido en localStorage)
+// ============================================================================
+function loadHistory() {
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) { state.history = []; return; }
+        const parsed = JSON.parse(raw);
+        state.history = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.warn('No se pudo leer el historial:', e);
+        state.history = [];
+    }
+}
+
+function saveHistory() {
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history));
+    } catch (e) {
+        console.warn('No se pudo guardar el historial:', e);
+    }
+}
+
+function recordHistory(entry) {
+    state.history.unshift(entry);
+    if (state.history.length > MAX_HISTORY) {
+        state.history.length = MAX_HISTORY;
+    }
+    saveHistory();
+    renderHistory();
+}
+
+function clearHistory() {
+    if (state.history.length === 0) return;
+    if (!confirm('¿Borrar todo el historial de análisis? Esta acción no se puede deshacer.')) return;
+    state.history = [];
+    saveHistory();
+    renderHistory();
+}
+
+function formatHistoryTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const time = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    if (sameDay) return `hoy · ${time}`;
+    const date = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+    return `${date} · ${time}`;
+}
+
+function renderHistory() {
+    const listEl = $('#history-list');
+    const countEl = $('#history-count');
+    const badgeEl = $('#history-badge');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = state.history.length;
+    if (badgeEl) {
+        if (state.history.length > 0) {
+            badgeEl.style.display = 'inline-block';
+            badgeEl.textContent = state.history.length;
+        } else {
+            badgeEl.style.display = 'none';
+        }
+    }
+
+    if (state.history.length === 0) {
+        listEl.innerHTML = '<p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">Aún no hay análisis guardados. Pulsa <strong>Parsear</strong> para crear el primero.</p>';
+        return;
+    }
+
+    let html = '';
+    state.history.forEach((entry, i) => {
+        const info = PARSER_INFO[entry.parser];
+        const parserTag = info ? info.tag : entry.parser;
+        const okClass = entry.success ? 'ok' : 'fail';
+        const okLabel = entry.success ? '✓ Aceptada' : '✗ Rechazada';
+        const grammarPreview = (entry.grammar || '').split('\n').slice(0, 3).join('\n');
+        const grammarTrailing = (entry.grammar || '').split('\n').length > 3 ? '\n…' : '';
+        html += `<div class="history-card ${okClass}" data-history-idx="${i}" role="button" tabindex="0" title="Restaurar gramática y cadena">
+            <div class="history-card-head">
+                <span class="history-parser">${parserTag}</span>
+                <span class="history-result ${okClass}">${okLabel}</span>
+                <span class="history-time">${formatHistoryTime(entry.timestamp)}</span>
+            </div>
+            <div class="history-input"><span class="history-label">entrada</span><code>${escapeHTML(entry.input || '(vacío)')}</code></div>
+            <pre class="history-grammar">${escapeHTML(grammarPreview + grammarTrailing)}</pre>
+        </div>`;
+    });
+    listEl.innerHTML = html;
+
+    $$('#history-list .history-card').forEach(el => {
+        const idx = parseInt(el.dataset.historyIdx, 10);
+        el.addEventListener('click', () => restoreFromHistory(idx));
+        el.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                restoreFromHistory(idx);
+            }
+        });
+    });
+}
+
+function restoreFromHistory(idx) {
+    const entry = state.history[idx];
+    if (!entry) return;
+    $('#grammar-input').value = entry.grammar || '';
+    $('#string-input').value = entry.input || '';
+    if (entry.parser && PARSER_INFO[entry.parser]) selectParser(entry.parser);
+    setStatus('success', 'Restaurado desde historial', 'Pulsa Parsear para re-ejecutar');
 }
 
 // Init on load

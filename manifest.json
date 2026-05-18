@@ -1,0 +1,21 @@
+{
+  "name": "ParserLab — The Ultimate Parser App",
+  "short_name": "ParserLab",
+  "description": "Análisis sintáctico interactivo: 6 parsers, tablas, autómatas y trace paso a paso (CS3402 · UTEC).",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f1e8",
+  "theme_color": "#d97706",
+  "lang": "es",
+  "categories": ["education", "developer", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
