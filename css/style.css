@@ -852,6 +852,9 @@ table.parser-table th:first-child { background: var(--ink); color: var(--accent)
 }
 
 .zoom-window {
+    height: min(62vh, 500px);
+    min-height: 420px;
+    max-height: none;
     overflow: hidden;
     cursor: grab;
     user-select: none;

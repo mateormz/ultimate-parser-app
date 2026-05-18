@@ -115,8 +115,9 @@ Factor -> ( Exp ) | id | num`,
 // Zoom configuration
 // ============================================================================
 const ZOOM_STEP = 0.1;
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 2.0;
+const ZOOM_DEFAULT = 1.4;
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 8.0;
 
 // ============================================================================
 // State
@@ -129,8 +130,8 @@ const state = {
     currentStep: 0,
     activeTab: 'ast',
     zoom: {
-        ast: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
-        automaton: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+        ast: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+        automaton: { scale: ZOOM_DEFAULT, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
     },
 };
 
@@ -161,14 +162,14 @@ function renderMermaid(targetSel, code) {
         try {
             window.mermaid.render(id, code).then(({ svg }) => {
                 ensureZoomContent(el).innerHTML = svg;
-                applyPanZoom(target);
+                requestAnimationFrame(() => resetPanZoom(target));
             }).catch(err => {
                 el.innerHTML = `<div class="zoom-content"><div class="error-card"><h4>Error renderizando diagrama</h4><p>${err.message}</p></div></div>`;
-                applyPanZoom(target);
+                requestAnimationFrame(() => resetPanZoom(target));
             });
         } catch (e) {
             el.innerHTML = `<div class="zoom-content"><div class="error-card"><h4>Error renderizando diagrama</h4><p>${e.message}</p></div></div>`;
-            applyPanZoom(target);
+            requestAnimationFrame(() => resetPanZoom(target));
         }
     }
 }
@@ -244,7 +245,8 @@ function zoomAtCenter(target, factor) {
 }
 
 function resetPanZoom(target) {
-    state.zoom[target] = { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
+    const centered = getCenteredPanZoom(target, ZOOM_DEFAULT);
+    state.zoom[target] = { scale: ZOOM_DEFAULT, x: centered.x, y: centered.y, isDragging: false, startX: 0, startY: 0 };
     const container = $(`#${target}-container`);
     if (container) container.classList.remove('dragging');
     applyPanZoom(target);
@@ -273,9 +275,23 @@ function zoomAtPoint(target, factor, clientX, clientY) {
 
 function getPanZoomState(target) {
     if (!state.zoom[target] || typeof state.zoom[target] === 'number') {
-        state.zoom[target] = { scale: state.zoom[target] || 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
+        const scale = state.zoom[target] || ZOOM_DEFAULT;
+        const centered = getCenteredPanZoom(target, scale);
+        state.zoom[target] = { scale, x: centered.x, y: centered.y, isDragging: false, startX: 0, startY: 0 };
     }
     return state.zoom[target];
+}
+
+function getCenteredPanZoom(target, scale = 1) {
+    const container = $(`#${target}-container`);
+    if (!container) return { x: 0, y: 0 };
+    const content = ensureZoomContent(container);
+    const contentWidth = content.offsetWidth * scale;
+    const contentHeight = content.offsetHeight * scale;
+    return {
+        x: (container.clientWidth - contentWidth) / 2,
+        y: (container.clientHeight - contentHeight) / 2,
+    };
 }
 
 function ensureZoomContent(container) {
