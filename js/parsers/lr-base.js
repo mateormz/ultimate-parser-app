@@ -238,7 +238,7 @@ class LRBase {
                 nodeStack.push(newNode);
             }
 
-            if (stepNum > 10000) {
+            if (stepNum > 199) {
                 return {
                     success: false,
                     error: 'Demasiados pasos. Posible bucle.',
