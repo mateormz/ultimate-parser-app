@@ -86,10 +86,9 @@ F -> ( E ) | id`,
         recommended: 'slr1'
     },
     'if-else': {
-        name: 'If-Else (ambigua → conflictos)',
-        grammar: `S -> i E t S | i E t S e S | a
-E -> b`,
-        input: 'i b t i b t a e a',
+        name: 'If-Else clásico',
+        grammar: `S -> if ( exp ) sentencia | if ( exp ) sentencia else sentencia`,
+        input: 'if ( exp ) sentencia else sentencia',
         recommended: 'lr1'
     },
     'parentheses': {
@@ -345,6 +344,7 @@ function init() {
     $('#parse-btn').addEventListener('click', runParse);
     $('#analyze-btn').addEventListener('click', analyzeGrammar);
     $('#example-select').addEventListener('change', e => selectExample(e.target.value));
+    $('#grammar-input').addEventListener('input', autoCorrectGrammarInput);
     $('#fix-leftrec-btn').addEventListener('click', fixLeftRecursion);
     $('#fix-factor-btn').addEventListener('click', factorGrammar);
     $$('.parser-option').forEach(btn => {
@@ -394,6 +394,24 @@ function selectParser(key) {
     setText('#current-parser-complexity', info.complexity);
     setText('#current-parser-lookahead', info.lookahead);
     setText('#current-parser-notes', info.notes);
+}
+
+function autoCorrectGrammarInput(event) {
+    const el = event.target;
+    if (!el || el.id !== 'grammar-input') return;
+
+    const cursor = el.selectionStart;
+    if (cursor !== el.selectionEnd || cursor === 0) return;
+
+    const before = el.value.slice(0, cursor);
+    const match = before.match(/(^|[^A-Za-z0-9_])eps([ \n])$/);
+    if (!match) return;
+
+    const replacement = `${match[1]}ε${match[2]}`;
+    const start = cursor - match[0].length;
+    el.value = el.value.slice(0, start) + replacement + el.value.slice(cursor);
+    const nextCursor = start + replacement.length;
+    el.selectionStart = el.selectionEnd = nextCursor;
 }
 
 function insertSymbol(sym) {
