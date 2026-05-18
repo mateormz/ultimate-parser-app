@@ -358,6 +358,7 @@ function init() {
     $('#step-last').addEventListener('click', () => goToStep(state.result?.trace?.length - 1 || 0));
     $('#step-play').addEventListener('click', autoPlay);
     $('#toggle-automaton-view-btn')?.addEventListener('click', toggleAutomatonView);
+    $('#ask-ai-btn')?.addEventListener('click', askGrammarAI);
     setupZoomControls();
 
     // Teclado virtual
@@ -834,6 +835,78 @@ function updateAutomatonViewButton() {
     const btn = $('#toggle-automaton-view-btn');
     if (!btn) return;
     btn.textContent = state.automatonExpanded ? 'Vista compacta' : 'Vista expandida';
+}
+
+async function askGrammarAI() {
+    const responseEl = $('#ai-response');
+    if (!responseEl) return;
+
+    const grammarText = $('#grammar-input')?.value || '';
+    const input = $('#string-input')?.value || '';
+    let grammar = state.grammar;
+
+    try {
+        grammar = grammar || new Grammar(grammarText);
+    } catch (e) {
+        responseEl.innerHTML = `<div class="error-card"><h4>Gramática inválida</h4><p>${escapeHTML(e.message)}</p></div>`;
+        return;
+    }
+
+    responseEl.innerHTML = '<div class="info-card">Consultando IA...</div>';
+    switchTab('ai');
+
+    const conflicts = [];
+    if (state.result?.tables?.conflicts) conflicts.push(...state.result.tables.conflicts);
+    if (state.parserInstance?.conflicts) conflicts.push(...state.parserInstance.conflicts);
+
+    const payload = {
+        grammar: grammarText,
+        input,
+        parser: state.currentParser,
+        success: state.result?.success ?? null,
+        error: state.result?.error || null,
+        conflicts,
+        first: serializeSets(grammar.first),
+        follow: serializeSets(grammar.follow),
+    };
+
+    try {
+        const res = await fetch('/api/grammar-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            if (data.rateLimit) console.log('GitHub Models rate limit:', data.rateLimit);
+            throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+        }
+
+        console.log('GitHub Models rate limit:', data.rateLimit);
+        responseEl.innerHTML = `<div class="ai-answer">${escapeHTML(data.answer || 'Sin respuesta.').replace(/\n/g, '<br>')}</div>`;
+    } catch (e) {
+        responseEl.innerHTML = `<div class="error-card"><h4>No se pudo consultar la IA</h4><p>${escapeHTML(e.message)}</p></div>`;
+    }
+}
+
+function serializeSets(sets) {
+    const out = {};
+    if (!sets) return out;
+    for (const [key, value] of Object.entries(sets)) {
+        out[key] = Array.isArray(value) ? value : [...value];
+    }
+    return out;
+}
+
+function escapeHTML(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // ============================================================================
