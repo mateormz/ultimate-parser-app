@@ -1012,6 +1012,30 @@ table.trace-table .lr-state { color: #dc2626; }
     color: var(--ink);
 }
 
+.ai-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.ai-action-btn {
+    width: auto;
+    align-self: flex-start;
+    padding: 10px 14px;
+}
+.ai-response {
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    min-height: 260px;
+    padding: 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+}
+.ai-answer {
+    white-space: normal;
+}
+
 /* ===== Grammar Analysis ===== */
 .analysis-grid {
     display: grid;

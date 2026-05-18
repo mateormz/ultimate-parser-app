@@ -246,6 +246,7 @@ F -> ( E ) | id</textarea>
                         <button class="tab" data-tab="automaton">Autómata</button>
                         <button class="tab" data-tab="conflicts" id="tab-conflicts">Conflictos <span class="tab-badge" style="display:none;">0</span></button>
                         <button class="tab" data-tab="analysis">Análisis</button>
+                        <button class="tab" data-tab="ai">IA</button>
                     </div>
 
                     <!-- Parse Tree tab -->
@@ -346,6 +347,16 @@ F -> ( E ) | id</textarea>
                     <div class="tab-panel" data-panel="analysis">
                         <div id="analysis-panel">
                             <p style="color: var(--ink-faded); padding: 12px; font-family: var(--font-mono);">Pulsa <strong>Analizar gramática</strong> para ver FIRST, FOLLOW, propiedades.</p>
+                        </div>
+                    </div>
+
+                    <!-- AI tab -->
+                    <div class="tab-panel" data-panel="ai">
+                        <div class="ai-panel">
+                            <button id="ask-ai-btn" class="btn-secondary-sm ai-action-btn">Explicar y sugerir mejora</button>
+                            <div id="ai-response" class="ai-response">
+                                <p>Parsea o analiza una gramática y luego consulta la IA para recibir sugerencias.</p>
+                            </div>
                         </div>
                     </div>
 
