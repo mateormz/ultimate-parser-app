@@ -51,6 +51,7 @@ python3 -m http.server 8000
 - ✅ **6 gramáticas de ejemplo** pre-cargadas (selector en la sidebar)
 - ✅ **Teclado virtual** para símbolos especiales (`ε`, `→`, `|`, `'`)
 - ✅ **Sugerencias de error** en lenguaje natural
+- ✅ **IA integrada** (pestaña IA): analiza la gramática con GPT-4.1-mini vía GitHub Models, explica conflictos y propone una gramática corregida que puedes aplicar con un solo clic
 
 ---
 
@@ -87,9 +88,12 @@ F -> ( E ) | id        # paréntesis y terminales literales
 
 ## Despliegue (opcional)
 
-### Vercel (lo más rápido)
+> ⚠️ **La función de IA requiere Vercel.** El botón "Explicar y sugerir mejora" llama a `/api/grammar-ai`, que es una serverless function de Vercel. No funciona con `open index.html` ni con `python3 -m http.server`. Para usarla debes desplegar en Vercel y configurar la variable de entorno `GITHUB_TOKEN` con un token que tenga acceso a **GitHub Models**.
+
+### Vercel (recomendado — incluye la IA)
 1. `npm i -g vercel`
 2. `cd parser-app && vercel` → te da una URL pública en 30 segundos.
+3. En el dashboard de Vercel, ve a **Settings → Environment Variables** y añade `GITHUB_TOKEN`.
 
 ### Netlify Drop
 Solo arrastra la carpeta `parser-app` a https://app.netlify.com/drop
@@ -111,6 +115,8 @@ gh repo create --public --source=. --push
 parser-app/
 ├── index.html              # UI completa (single-page)
 ├── css/style.css           # Estilos (Technical Editorial aesthetic)
+├── api/
+│   └── grammar-ai.js       # Vercel serverless function — llama a GitHub Models (GPT-4.1-mini)
 └── js/
     ├── grammar/
     │   ├── grammar.js      # Clase Grammar: parse BNF, FIRST/FOLLOW, augment
