@@ -1035,6 +1035,58 @@ table.trace-table .lr-state { color: #dc2626; }
 .ai-answer {
     white-space: normal;
 }
+#ai-response h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 1.2;
+    color: var(--ink);
+    margin: 18px 0 8px;
+}
+#ai-response h2:first-child { margin-top: 0; }
+#ai-response h3 {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--accent-dark);
+    margin: 16px 0 8px;
+}
+#ai-response p {
+    margin: 0 0 10px;
+}
+#ai-response ul,
+#ai-response ol {
+    padding-left: 24px;
+    margin: 8px 0 14px;
+}
+#ai-response li {
+    margin-bottom: 6px;
+}
+#ai-response pre {
+    overflow-x: auto;
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    padding: 12px;
+    margin: 12px 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+#ai-response code {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule-soft);
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+#ai-response pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+#ai-response blockquote {
+    border-left: 4px solid var(--accent);
+    padding-left: 12px;
+    margin: 12px 0;
+    color: var(--ink-faded);
+}
 
 /* ===== Grammar Analysis ===== */
 .analysis-grid {

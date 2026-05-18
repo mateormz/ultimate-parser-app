@@ -43,7 +43,7 @@ app.post('/api/grammar-ai', async (req, res) => {
 
   try {
     const completion = await client.chat.completions.create({
-      model: 'openai/gpt-4.1-mini',
+      model: 'openai/gpt-4.1',
       temperature: 0.2,
       messages: [
         {
@@ -67,22 +67,33 @@ app.listen(port, () => {
   console.log(`ParserLab AI backend escuchando en http://localhost:${port}`);
 });
 
-function buildPrompt(context) {
-  return `Analiza esta gramática en español y sugiere mejoras reales.
+function buildGrammarAIPrompt(context) {
+    return `
+Eres un asistente experto en compiladores, gramáticas formales y análisis sintáctico LL/LR.
+
+Tu tarea es analizar la gramática proporcionada y dar recomendaciones útiles para mejorarla, corregirla o entender sus limitaciones.
+
+No asumas que siempre basta con aplicar transformaciones mecánicas como eliminar recursión izquierda o factorizar. Evalúa si el problema real puede ser ambigüedad, uso de ε, conflictos FIRST/FOLLOW, conflictos shift/reduce, conflictos reduce/reduce, concatenación problemática, falta de precedencia, falta de asociatividad u otra causa gramatical.
 
 Objetivos de tu respuesta:
 - Explica qué problema tiene la gramática, si existe.
 - Explica conflictos LL/LR si hay.
-- Di explícitamente si eliminar recursión izquierda no basta y por qué.
 - Propón una gramática corregida cuando sea posible.
 - Da ejemplos de cadenas válidas para la gramática propuesta.
 - Si la gramática ya está bien para el objetivo, dilo y justifica.
+- Si no es posible proponer una corrección segura sin conocer el lenguaje objetivo, dilo claramente.
+- Mantén la respuesta en español, con secciones breves y accionables.
+- No inventes una intención si la gramática es ambigua o el objetivo no está claro; plantea la suposición usada.
 
-Caso importante:
-Para gramáticas como:
-S -> ( S ) | S S | ε
-debes explicar que la gramática es ambigua, que eliminar recursión izquierda no basta por ε y concatenación S S, y puedes sugerir:
-S -> ( S ) S | ε
+Criterios de análisis:
+- Revisa si la gramática tiene recursión izquierda directa o indirecta.
+- Revisa si tiene producciones ε que puedan causar ambigüedad o ciclos.
+- Revisa si hay alternativas que empiezan igual y requieren factorización.
+- Revisa si hay conflictos FIRST/FOLLOW en gramáticas LL.
+- Revisa si hay conflictos shift/reduce o reduce/reduce en gramáticas LR.
+- Revisa si la gramática mezcla concatenación, ε y recursión de forma peligrosa.
+- Revisa si la gramática necesita reglas de precedencia/asociatividad para operadores.
+- Revisa si la gramática parece ambigua y explica por qué.
 
 Contexto recibido:
 
@@ -118,5 +129,24 @@ FOLLOW:
 ${JSON.stringify(context.follow || {}, null, 2)}
 \`\`\`
 
-Responde con secciones breves y accionables.`;
+Formato de respuesta solicitado:
+
+## Diagnóstico
+Explica el problema principal, si existe.
+
+## Conflictos detectados
+Explica los conflictos LL/LR si aparecen en el contexto.
+
+## Sobre eliminar recursión izquierda
+Indica si ayuda, si no ayuda, o si no es suficiente. Explica por qué.
+
+## Propuesta de mejora
+Propón una gramática corregida o mejor estructurada si es posible.
+
+## Ejemplos válidos
+Da algunas cadenas válidas para la gramática propuesta o para la gramática original si ya está bien.
+
+## Recomendación final
+Resume qué debería hacer el estudiante.
+`;
 }
