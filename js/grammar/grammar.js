@@ -225,21 +225,40 @@ class Grammar {
 
     // Gramática aumentada para LR
     augment() {
+        // Already augmented if: start symbol has exactly one production → single non-terminal,
+        // and that start symbol never appears on any RHS (pure entry point).
+        const startProds = this.getProductionsFor(this.startSymbol);
+        const alreadyAugmented =
+            startProds.length === 1 &&
+            startProds[0].rhs.length === 1 &&
+            this.isNonTerminal(startProds[0].rhs[0]) &&
+            !this.productions.some(p => p.rhs.includes(this.startSymbol));
+
         const augmented = new Grammar.__skip__();
         augmented.text = this.text;
         augmented.productions = [];
         augmented.nonTerminals = new Set(this.nonTerminals);
         augmented.terminals = new Set(this.terminals);
-        const newStart = this.startSymbol + "'";
-        augmented.startSymbol = newStart;
-        augmented.nonTerminals.add(newStart);
-        augmented.productions.push({ lhs: newStart, rhs: [this.startSymbol] });
-        for (const p of this.productions) {
-            augmented.productions.push({ lhs: p.lhs, rhs: [...p.rhs] });
-        }
-        // Copiar first/follow original y extender
         augmented.first = {};
         augmented.follow = {};
+
+        if (alreadyAugmented) {
+            augmented.startSymbol = this.startSymbol;
+            augmented.wasAutoAugmented = false;
+            for (const p of this.productions) {
+                augmented.productions.push({ lhs: p.lhs, rhs: [...p.rhs] });
+            }
+        } else {
+            const newStart = this.startSymbol + "'";
+            augmented.startSymbol = newStart;
+            augmented.wasAutoAugmented = true;
+            augmented.nonTerminals.add(newStart);
+            augmented.productions.push({ lhs: newStart, rhs: [this.startSymbol] });
+            for (const p of this.productions) {
+                augmented.productions.push({ lhs: p.lhs, rhs: [...p.rhs] });
+            }
+        }
+
         Grammar.prototype.computeFirst.call(augmented);
         Grammar.prototype.computeFollow.call(augmented);
         return augmented;
